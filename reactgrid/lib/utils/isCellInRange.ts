@@ -1,8 +1,8 @@
-import isEqual from "lodash.isequal";
 import { EMPTY_AREA, SpanMember } from "../types/InternalModel.ts";
 import { NumericalRange } from "../types/PublicModel.ts";
 import { Cell } from "../types/PublicModel.ts";
 import { ReactGridStore } from "../types/ReactGridStore.ts";
+import { areAreasEqual } from "./areAreasEqual.ts";
 import { getCellArea } from "./getCellArea.ts";
 
 export const isCellInRange = (
@@ -10,7 +10,7 @@ export const isCellInRange = (
   cell: Cell | SpanMember | undefined,
   range: NumericalRange
 ): boolean => {
-  if (!cell || isEqual(range, EMPTY_AREA)) {
+  if (!cell || areAreasEqual(range, EMPTY_AREA)) {
     return false;
   }
 
