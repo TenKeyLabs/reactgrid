@@ -10,9 +10,14 @@ export default defineConfig({
     react({
       jsxImportSource: "@emotion/react",
     }),
-    dts({ include: ["lib"] }),
+    // Declarations roll up into a single main.d.ts, so the published artifact is one bundle, one declaration file and one sourcemap.
+    dts({ include: ["lib"], exclude: ["lib/**/*.test.*"], rollupTypes: true }),
     cssInjectedByJsPlugin(),
   ],
+  // Library builds are always production builds: the development-only branches are compiled away rather than left to the consumer's bundler.
+  define: {
+    "process.env.NODE_ENV": JSON.stringify("production"),
+  },
   esbuild: {
     drop: ["console"],
   },
@@ -26,6 +31,8 @@ export default defineConfig({
     rollupOptions: {
       external: ["react", "react/jsx-runtime"],
     },
+    minify: "esbuild",
+    sourcemap: true,
     emptyOutDir: true,
   },
 });
