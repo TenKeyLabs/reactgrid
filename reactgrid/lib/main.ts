@@ -16,3 +16,5 @@ export { useCellContext } from "./components/CellContext";
 export { useDoubleTouch } from "./hooks/useDoubleTouch";
 
 export { useReactGridAPI } from "./hooks/useReactGridAPI";
+
+export type { RGTheme } from "./types/RGTheme";
