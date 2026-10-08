@@ -15,6 +15,8 @@ type SetCellFn = <TComponent extends React.ComponentType<any>>(
 
 interface CellMatrixBuilderTools {
   setCell: SetCellFn;
+  // Stores the given object itself, so cells the consumer keeps stable between renders keep their identity in the matrix.
+  addCell: (cell: Cell) => void;
 }
 
 /**
@@ -36,7 +38,8 @@ export const cellMatrixBuilder = (
   const cells = new Map();
   const cellsLookup = new Map();
 
-  const setCell: SetCellFn = (rowIndex, colIndex, Template, props, { ...args }) => {
+  const addCell = (cell: Cell) => {
+    const { rowIndex, colIndex } = cell;
     if (rowIndex === -1) throw new Error(`Row with id "${rowIndex}" isn't defined in rows array`);
     if (colIndex === -1) throw new Error(`Column with id "${colIndex}" isn't defined in columns array`);
 
@@ -45,16 +48,8 @@ export const cellMatrixBuilder = (
       return;
     }
 
-    const cell = {
-      rowIndex,
-      colIndex,
-      Template,
-      props,
-      ...Object.fromEntries(Object.entries(args).filter(([_, value]) => value !== undefined)),
-    };
-
-    const rowSpan = args.rowSpan ?? 1;
-    const colSpan = args.colSpan ?? 1;
+    const rowSpan = cell.rowSpan ?? 1;
+    const colSpan = cell.colSpan ?? 1;
 
     for (let rowOffset = 0; rowOffset < rowSpan; rowOffset++) {
       const currentRowIndex = rowIndex + rowOffset;
@@ -74,22 +69,32 @@ export const cellMatrixBuilder = (
     }
 
     // Cells declaring their clipboard callbacks are reachable without being mounted; the others register from CellWrapper while rendered.
-    if (args.onStringValueRequested || args.onStringValueReceived) {
+    if (cell.onStringValueRequested || cell.onStringValueReceived) {
       cellsLookup.set(`${rowIndex} ${colIndex}`, {
         rowIndex,
         colIndex,
-        onStringValueRequested: args.onStringValueRequested ?? (() => ""),
-        onStringValueReceived: args.onStringValueReceived ?? (() => {}),
+        onStringValueRequested: cell.onStringValueRequested ?? (() => ""),
+        onStringValueReceived: cell.onStringValueReceived ?? (() => {}),
       });
     }
 
     cells.set(`${rowIndex} ${colIndex}`, cell);
   };
 
-  builder({ setCell });
+  const setCell: SetCellFn = (rowIndex, colIndex, Template, props, { ...args }) =>
+    addCell({
+      rowIndex,
+      colIndex,
+      Template,
+      props,
+      ...Object.fromEntries(Object.entries(args).filter(([_, value]) => value !== undefined)),
+    });
 
-  const maxRowIndex = Math.max(...Array.from(cells.values()).map((cell) => cell.rowIndex ?? -1));
-  const maxColIndex = Math.max(...Array.from(cells.values()).map((cell) => cell.colIndex ?? -1));
+  builder({ setCell, addCell });
+
+  // Reduced rather than spread: a spread passes every cell as an argument and overflows the call stack on big grids.
+  const maxRowIndex = Array.from(cells.values()).reduce((max, cell) => Math.max(max, cell.rowIndex ?? -1), -1);
+  const maxColIndex = Array.from(cells.values()).reduce((max, cell) => Math.max(max, cell.colIndex ?? -1), -1);
 
   for (let rowIndex = 0; rowIndex <= maxRowIndex; rowIndex++) {
     for (let colIndex = 0; colIndex <= maxColIndex; colIndex++) {

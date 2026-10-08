@@ -29,7 +29,8 @@ export const useReactGridSync = (
 
   // sync cells with store
   useEffect(() => {
-    if (store && !isEqual(cellMatrix.cells, store.cells)) {
+    // The matrix is memoized on the consumer's arrays, so a new one means changed cells; a deep compare would cost more than the update.
+    if (store && cellMatrix.cells !== store.cells) {
       // Callbacks declared on the cells replace their previous versions; the ones registered by mounted CellWrappers are kept.
       const cellsLookup = new Map([...store.cellsLookup, ...cellMatrix.cellsLookup]);
 
