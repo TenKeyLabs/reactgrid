@@ -1,4 +1,4 @@
-import { FC, useEffect, useRef, useState } from "react";
+import { FC, useEffect, useMemo, useRef, useState } from "react";
 import { ErrorBoundary } from "./ErrorBoundary";
 import GridWrapper from "./GridWrapper";
 import PanesRenderer from "./PanesRenderer";
@@ -7,7 +7,6 @@ import { ReactGridProps } from "../types/PublicModel";
 import isDevEnvironment from "../utils/isDevEnvironment";
 import { initReactGridStore, reactGridStores } from "../utils/reactGridStore";
 import { cellMatrixBuilder } from "../utils/cellMatrixBuilder";
-import { useDeepCompareMemo } from "../hooks/useDeepCompareMemo";
 import { useInitialFocusLocation } from "../hooks/useInitialFocusLocation";
 import { useInitialSelectedRange } from "../hooks/useInitialSelectedRange";
 import { v4 as uuidv4 } from "uuid";
@@ -29,17 +28,11 @@ export const ReactGrid: FC<ReactGridProps> = ({
 }) => {
   const reactGridId = useRef(id ?? `rg-${uuidv4()}`);
 
-  const cellMatrix = useDeepCompareMemo(() => {
-    return cellMatrixBuilder(rows, columns, ({ setCell }) => {
-      cells.forEach((cell) => {
-        if (cell === null) return;
-
-        const { Template, rowIndex, colIndex, props, ...args } = cell;
-
-        setCell(rowIndex, colIndex, Template, props, args);
-      });
-    });
-  }, [rows, columns, cells]);
+  // Consumer cell objects go into the matrix as they are, so the ones kept stable between renders skip re-rendering.
+  const cellMatrix = useMemo(
+    () => cellMatrixBuilder(rows, columns, ({ addCell }) => cells.forEach((cell) => cell !== null && addCell(cell))),
+    [rows, columns, cells]
+  );
 
   useEffect(() => {
     initReactGridStore(reactGridId.current, {
