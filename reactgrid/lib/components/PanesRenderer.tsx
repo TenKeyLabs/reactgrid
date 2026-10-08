@@ -43,6 +43,7 @@ const PanesRenderer: FC<PanesRendererProps> = ({
   const cells = useReactGridStore(id, (store) => store.cells);
   const virtualizeRows = useReactGridStore(id, (store) => store.virtualizeRows);
   const rowOverscanRatio = useReactGridStore(id, (store) => store.rowOverscanRatio);
+  const rowsMountedPerFrame = useReactGridStore(id, (store) => store.rowsMountedPerFrame);
 
   const theme = useTheme();
   const focusedLocation = useReactGridStore(id, (store) => store.focusedLocation);
@@ -212,7 +213,8 @@ const PanesRenderer: FC<PanesRendererProps> = ({
     gridContainerRef,
     rowMeasurements,
     Boolean(virtualizeRows),
-    rowOverscanRatio ?? DEFAULT_ROW_OVERSCAN_RATIO
+    rowOverscanRatio ?? DEFAULT_ROW_OVERSCAN_RATIO,
+    rowsMountedPerFrame
   );
 
   /**

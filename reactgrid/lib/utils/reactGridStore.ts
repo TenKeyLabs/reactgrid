@@ -81,8 +81,8 @@ export function initReactGridStore(id: string, initialProps: Partial<ReactGridSt
         ...DEFAULT_STORE_PROPS,
         cellElements: createCellElementsRegistry(),
         ...initialProps,
-        // A virtualized grid starts empty so its first commit mounts the window rather than every row.
-        renderedRowRange: initialProps.virtualizeRows ? NO_ROWS : ALL_ROWS,
+        // The grid starts empty: the rows to mount first are decided before paint, from the viewport outwards.
+        renderedRowRange: NO_ROWS,
         id,
         behaviors: { ...DEFAULT_STORE_PROPS.behaviors, ...initialProps?.behaviors },
         getRowAmount: () => get().rows.length,

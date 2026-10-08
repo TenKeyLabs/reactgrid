@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { ALL_ROWS } from "../types/InternalModel";
 import { getRowMeasurements } from "./getRowMeasurements";
-import { getRenderedRowRange, getRowIndexesToRender, getVisibleRowRange } from "./renderedRows";
+import {
+  getRenderedRowRange,
+  getRowIndexesToRender,
+  getVisibleRowRange,
+  getWholeGridRowRange,
+  stepRowRangeToward,
+} from "./renderedRows";
 
 const rows = Array.from({ length: 100 }, (_, rowIndex) => ({ rowIndex, height: 10 }));
 const rowMeasurements = getRowMeasurements(rows, 1)!;
@@ -57,6 +63,42 @@ describe("getRenderedRowRange", () => {
   it("never reaches beyond the grid", () => {
     expect(getRenderedRowRange(rowMeasurements, 0, 30, overscan, ALL_ROWS)).toEqual({ startRowIdx: 0, endRowIdx: 8 });
     expect(getRenderedRowRange(rowMeasurements, 1_080, 1_200, overscan, ALL_ROWS)).toEqual({ startRowIdx: 93, endRowIdx: 100 });
+  });
+});
+
+describe("getWholeGridRowRange", () => {
+  it("covers every row, and hands back the current range once it already does", () => {
+    expect(getWholeGridRowRange(rowMeasurements, { startRowIdx: 10, endRowIdx: 50 })).toEqual({ startRowIdx: 0, endRowIdx: 100 });
+
+    const covering = { startRowIdx: 0, endRowIdx: 100 };
+    expect(getWholeGridRowRange(rowMeasurements, covering)).toBe(covering);
+    expect(getWholeGridRowRange(rowMeasurements, ALL_ROWS)).toBe(ALL_ROWS);
+  });
+});
+
+describe("stepRowRangeToward", () => {
+  const target = { startRowIdx: 40, endRowIdx: 70 };
+  const visible = { startRowIdx: 50, endRowIdx: 60 };
+
+  it("starts a jump from the first visible row and fills the viewport downwards", () => {
+    expect(stepRowRangeToward({ startRowIdx: 0, endRowIdx: 20 }, target, visible, 4)).toEqual({ startRowIdx: 50, endRowIdx: 54 });
+    expect(stepRowRangeToward(ALL_ROWS, target, visible, 4)).toEqual({ startRowIdx: 50, endRowIdx: 54 });
+  });
+
+  it("drops the rows that left the target at once and mounts the visible rows before the overscan", () => {
+    // Scrolling down: rows 30-39 leave, the visible rows 56-59 come first, then the overscan below, then above.
+    const afterDrop = stepRowRangeToward({ startRowIdx: 30, endRowIdx: 56 }, target, visible, 4);
+    expect(afterDrop).toEqual({ startRowIdx: 40, endRowIdx: 60 });
+    expect(stepRowRangeToward(afterDrop, target, visible, 4)).toEqual({ startRowIdx: 40, endRowIdx: 64 });
+
+    // Scrolling up: the visible rows above the mounted ones come first.
+    expect(stepRowRangeToward({ startRowIdx: 55, endRowIdx: 80 }, target, visible, 4)).toEqual({ startRowIdx: 51, endRowIdx: 70 });
+  });
+
+  it("mounts the overscan above last and stops at the target", () => {
+    expect(stepRowRangeToward({ startRowIdx: 45, endRowIdx: 70 }, target, visible, 4)).toEqual({ startRowIdx: 41, endRowIdx: 70 });
+    expect(stepRowRangeToward({ startRowIdx: 41, endRowIdx: 70 }, target, visible, 4)).toEqual(target);
+    expect(stepRowRangeToward(target, target, visible, 4)).toEqual(target);
   });
 });
 
