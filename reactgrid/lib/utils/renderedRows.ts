@@ -30,8 +30,57 @@ export const getVisibleRowRange = (rowMeasurements: RowMeasurement[], top: numbe
 const isRowRangeWithin = (inner: RowRange, outer: RowRange) =>
   inner.startRowIdx >= outer.startRowIdx && inner.endRowIdx <= outer.endRowIdx;
 
+const doRowRangesOverlap = (first: RowRange, second: RowRange) =>
+  first.startRowIdx < second.endRowIdx && second.startRowIdx < first.endRowIdx;
+
+const clampRowRange = (range: RowRange, bounds: RowRange): RowRange => ({
+  startRowIdx: Math.max(range.startRowIdx, bounds.startRowIdx),
+  endRowIdx: Math.min(range.endRowIdx, bounds.endRowIdx),
+});
+
 export const areRowRangesEqual = (first: RowRange, second: RowRange) =>
   first.startRowIdx === second.startRowIdx && first.endRowIdx === second.endRowIdx;
+
+/** Every row of the grid, or `current` itself when it already covers them, so callers can compare by reference. */
+export const getWholeGridRowRange = (rowMeasurements: RowMeasurement[], current: RowRange): RowRange => {
+  const wholeGrid = { startRowIdx: 0, endRowIdx: rowMeasurements.length };
+
+  return isRowRangeWithin(wholeGrid, current) ? current : wholeGrid;
+};
+
+/**
+ * One step of a refill towards `target`: rows outside it leave at once, then at most `stepRows` enter, the visible
+ * ones first (above the mounted rows, then below), followed by the overscan below and above. A current range that does
+ * not overlap the target (a jump, or the whole grid before the first window) starts over from the first visible row.
+ */
+export const stepRowRangeToward = (
+  current: RowRange,
+  target: RowRange,
+  visible: RowRange,
+  stepRows: number
+): RowRange => {
+  const kept =
+    current !== ALL_ROWS && doRowRangesOverlap(current, target)
+      ? clampRowRange(current, target)
+      : { startRowIdx: visible.startRowIdx, endRowIdx: visible.startRowIdx };
+  const grownAbove = { ...kept, startRowIdx: Math.max(target.startRowIdx, kept.startRowIdx - stepRows) };
+  const grownBelow = { ...kept, endRowIdx: Math.min(target.endRowIdx, kept.endRowIdx + stepRows) };
+  const needsRowsAbove = kept.startRowIdx > target.startRowIdx;
+  const needsRowsBelow = kept.endRowIdx < target.endRowIdx;
+
+  switch (true) {
+    case needsRowsAbove && kept.startRowIdx > visible.startRowIdx:
+      return grownAbove;
+    case needsRowsBelow && kept.endRowIdx < visible.endRowIdx:
+      return grownBelow;
+    case needsRowsBelow:
+      return grownBelow;
+    case needsRowsAbove:
+      return grownAbove;
+    default:
+      return kept;
+  }
+};
 
 /**
  * The rows to keep mounted: the viewport plus `overscan` pixels on each side. The current range is kept while it still

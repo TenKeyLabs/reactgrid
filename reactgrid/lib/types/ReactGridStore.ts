@@ -27,6 +27,7 @@ export interface ReactGridStoreProps {
 
   virtualizeRows?: boolean;
   rowOverscanRatio?: number;
+  rowsMountedPerFrame?: number;
   renderedRowRange: RowRange;
 
   focusedLocation: IndexedLocation;

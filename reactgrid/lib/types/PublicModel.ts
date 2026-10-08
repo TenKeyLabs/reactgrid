@@ -143,13 +143,19 @@ export interface ReactGridProps {
   moveRightOnEnter?: boolean;
 
   /**
-   * Mounts only the rows scrolled into view (plus a margin) instead of the whole grid.
+   * Mounts only the rows scrolled into view (plus a margin) instead of the whole grid, unmounting them as they leave.
    * Requires pixel row heights, and cells that declare `onStringValueRequested`/`onStringValueReceived` to stay
    * reachable by clipboard and fill operations while unmounted.
    */
   virtualizeRows?: boolean;
   /** With `virtualizeRows`, the fraction of the viewport height kept mounted beyond each viewport edge (default 0.5). */
   rowOverscanRatio?: number;
+  /**
+   * How many rows entering the grid are mounted per animation frame, the visible ones first, so no single commit
+   * blocks the frame for long; rows show their background until their turn. Unset mounts them all in one commit.
+   * Requires pixel row heights.
+   */
+  rowsMountedPerFrame?: number;
 
   onFocusLocationChanging?: ({ location }: { location: IndexedLocation }) => boolean;
   onFocusLocationChanged?: ({ location }: { location: IndexedLocation }) => void;
