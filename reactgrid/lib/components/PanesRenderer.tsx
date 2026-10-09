@@ -4,7 +4,6 @@ import { reactGridStores, useReactGridStore } from "../utils/reactGridStore";
 import { useTheme } from "../hooks/useTheme";
 import { Pane } from "./Pane";
 import { useReactGridId } from "./ReactGridIdProvider";
-import { RowMeasurement } from "../types/RowMeasurement";
 import {
   getStickyColumnsOffsetsFromMeasurements,
   getStickyRowsOffsetsFromMeasurements,
@@ -14,6 +13,12 @@ import { getCellArea } from "../utils/getCellArea";
 import { isSpanMember } from "../utils/isSpanMember";
 import { getValueFromPixelString } from "../utils/getValueFromPixelString";
 import { PaneShadow } from "./PaneShadow";
+import { getRowMeasurements } from "../utils/getRowMeasurements";
+import { useRenderedRowRange } from "../hooks/useRenderedRowRange";
+import { DEFAULT_ROW_OVERSCAN_RATIO } from "../utils/renderedRows";
+import isDevEnvironment from "../utils/isDevEnvironment";
+
+const devEnvironment = isDevEnvironment();
 
 interface PanesRendererProps {
   stickyTopRows: number;
@@ -21,6 +26,8 @@ interface PanesRendererProps {
   stickyLeftColumns: number;
   stickyRightColumns: number;
 }
+
+type StickyColumnOffsets = Pick<StickyOffsets, "leftColumns" | "rightColumns">;
 
 const PanesRenderer: FC<PanesRendererProps> = ({
   stickyTopRows,
@@ -34,6 +41,8 @@ const PanesRenderer: FC<PanesRendererProps> = ({
   const rows = useReactGridStore(id, (store) => store.rows);
   const columns = useReactGridStore(id, (store) => store.columns);
   const cells = useReactGridStore(id, (store) => store.cells);
+  const virtualizeRows = useReactGridStore(id, (store) => store.virtualizeRows);
+  const rowOverscanRatio = useReactGridStore(id, (store) => store.rowOverscanRatio);
 
   const theme = useTheme();
   const focusedLocation = useReactGridStore(id, (store) => store.focusedLocation);
@@ -145,25 +154,45 @@ const PanesRenderer: FC<PanesRendererProps> = ({
     setPaneRanges(ranges);
   }, [ranges]);
 
-  const [stickyOffsets, setStickyOffsets] = useState<StickyOffsets>({
-    topRows: [],
-    bottomRows: [],
+  const gapWidth = getValueFromPixelString(theme.gap.width ?? 0);
+
+  // Row positions follow from the declared heights, so rows outside the rendered window need no DOM measurement.
+  const rowMeasurements = useMemo(() => getRowMeasurements(rows, gapWidth), [rows, gapWidth]);
+
+  useEffect(() => {
+    if (devEnvironment && !rowMeasurements) {
+      console.error("Row heights must be pixel values for sticky rows and row virtualization to be positioned.");
+    }
+
+    setRowMeasurements(rowMeasurements ?? []);
+  }, [rowMeasurements]);
+
+  const stickyRowOffsets = useMemo(
+    () => ({
+      topRows: getStickyRowsOffsetsFromMeasurements(rowMeasurements ?? [], stickyTopRows, "forward"),
+      bottomRows: getStickyRowsOffsetsFromMeasurements(rowMeasurements ?? [], stickyBottomRows, "backward"),
+    }),
+    [rowMeasurements, stickyTopRows, stickyBottomRows]
+  );
+
+  const [stickyColumnOffsets, setStickyColumnOffsets] = useState<StickyColumnOffsets>({
     leftColumns: [],
     rightColumns: [],
   });
 
+  const stickyOffsets = useMemo<StickyOffsets>(
+    () => ({ ...stickyRowOffsets, ...stickyColumnOffsets }),
+    [stickyRowOffsets, stickyColumnOffsets]
+  );
+
   const gridContainerRef = useRef<HTMLDivElement>(null);
   const resizeObserver = useRef<ResizeObserver>(
     new ResizeObserver(() => {
-      const rowMeasurements = getRowsMeasurements();
       const colMeasurements = getColumnsMeasurements();
 
-      setRowMeasurements(rowMeasurements);
       setColMeasurements(colMeasurements);
 
-      setStickyOffsets(() => ({
-        topRows: getStickyRowsOffsetsFromMeasurements(rowMeasurements, stickyTopRows, "forward"),
-        bottomRows: getStickyRowsOffsetsFromMeasurements(rowMeasurements, stickyBottomRows, "backward"),
+      setStickyColumnOffsets(() => ({
         leftColumns: getStickyColumnsOffsetsFromMeasurements(colMeasurements, stickyLeftColumns, "forward"),
         rightColumns: getStickyColumnsOffsetsFromMeasurements(colMeasurements, stickyRightColumns, "backward"),
       }));
@@ -179,53 +208,12 @@ const PanesRenderer: FC<PanesRendererProps> = ({
     return () => observer.disconnect();
   }, []);
 
-  /**
-   * Measures the widths and offsets of rows. Fetches the cell until it finds a cell that is not spanned.
-   *
-   * @returns RowMeasurement[] - an array of row measurements
-   */
-  const getRowsMeasurements = (): RowMeasurement[] => {
-    if (rowAmount === 0 || !gridContainerRef.current) return [];
-    const gapWidth = parseFloat(window.getComputedStyle(gridContainerRef.current).gap ?? "0");
-    const rowsMeasurements: RowMeasurement[] = [];
-
-    let rowIndex = 0;
-    let colIndexOffset = 0;
-
-    do {
-      const cell = store.getCellByIndexes(rowIndex, colIndexOffset);
-
-      if (!cell) {
-        colIndexOffset++;
-        continue;
-      }
-
-      const cellElement = gridContainerRef.current.getElementsByClassName(
-        `rgRowIdx-${cell.rowIndex} rgColIdx-${cell.colIndex}`
-      )[0];
-
-      if (cellElement) {
-        const rowHeight = cellElement.getBoundingClientRect().height;
-        const rowOffset =
-          rowIndex === 0
-            ? gapWidth
-            : rowsMeasurements[rowIndex - 1].offsetTop + rowsMeasurements[rowIndex - 1].height + gapWidth;
-
-        rowsMeasurements.push({ height: rowHeight, offsetTop: rowOffset });
-
-        colIndexOffset = 0;
-        rowIndex++;
-
-        resizeObserver.current.observe(cellElement);
-        continue;
-      }
-
-      // No element found, increment colOffset and try again
-      colIndexOffset++;
-    } while (rowIndex < rowAmount && colIndexOffset < columnAmount);
-
-    return rowsMeasurements;
-  };
+  useRenderedRowRange(
+    gridContainerRef,
+    rowMeasurements,
+    Boolean(virtualizeRows),
+    rowOverscanRatio ?? DEFAULT_ROW_OVERSCAN_RATIO
+  );
 
   /**
    * Measures the widths and offsets of columns. Fetches the cell until it finds a cell that is not spanned.

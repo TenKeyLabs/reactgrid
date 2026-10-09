@@ -3,6 +3,7 @@ import { ReactGridStore } from "../types/ReactGridStore.ts";
 import { calcSelectedAreaWidth } from "../utils/calcSelectedAreaWidth.ts";
 import { findMinimalSelectedArea } from "../utils/findMinimalSelectedArea.ts";
 import { getCellContainer } from "../utils/getCellContainer.ts";
+import { focusCell } from "../utils/focusCell.ts";
 import { getCellContainerFromPoint } from "../utils/getCellContainerFromPoint.ts";
 import { getCellIndexesFromContainerElement } from "../utils/getCellIndexes.ts";
 import { getCellIndexesFromPointerLocation } from "../utils/getCellIndexesFromPointerLocation.ts";
@@ -53,7 +54,7 @@ export const ColumnReorderBehavior: Behavior = {
     const hiddenFocusTarget = document.activeElement;
     if (!hiddenFocusTarget) return store;
 
-    const { rowIndex, colIndex } = getHiddenFocusTargetLocation(store.id, hiddenFocusTarget);
+    const { rowIndex, colIndex } = getHiddenFocusTargetLocation(store, hiddenFocusTarget);
     if (rowIndex === -1 || colIndex === -1) return store;
 
     return {
@@ -432,9 +433,10 @@ const handlePointerUp = (
       console.error(e);
     }
 
+    focusCell(store, newFocusedLocation.rowIndex, newFocusedLocation.colIndex);
+
     return {
       currentBehavior: store.getBehavior("Default"),
-      changedFocusedLocation: newFocusedLocation,
       selectedArea: {
         startRowIdx: 0,
         endRowIdx: store.rows.length,
@@ -460,9 +462,10 @@ const handlePointerUp = (
       console.error(e);
     }
 
+    focusCell(store, newFocusedLocation.rowIndex, newFocusedLocation.colIndex);
+
     return {
       currentBehavior: store.getBehavior("Default"),
-      changedFocusedLocation: newFocusedLocation,
       selectedArea: {
         startRowIdx: 0,
         endRowIdx: store.rows.length,
@@ -492,9 +495,10 @@ const handlePointerUp = (
     console.error(e);
   }
 
+  focusCell(store, newFocusedLocation.rowIndex, newFocusedLocation.colIndex);
+
   return {
     currentBehavior: store.getBehavior("Default"),
-    changedFocusedLocation: newFocusedLocation,
     selectedArea: {
       startRowIdx: 0,
       endRowIdx: store.rows.length,

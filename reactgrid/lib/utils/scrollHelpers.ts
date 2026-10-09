@@ -1,5 +1,27 @@
 type ScrollableElement = HTMLElement | ReturnType<typeof getTopScrollableElement> | undefined;
 
+export type ScrollParent = HTMLElement | Window;
+
+export const isWindow = (scrollParent: ScrollParent): scrollParent is Window => !("getBoundingClientRect" in scrollParent);
+
+/** The scroll parent's viewport expressed in the coordinate space of `element` (whose top-left corner is the origin). */
+export const getScrollViewport = (scrollParent: ScrollParent, element: HTMLElement) => {
+  const elementRect = element.getBoundingClientRect();
+
+  if (isWindow(scrollParent)) {
+    return { top: -elementRect.top, left: -elementRect.left, height: window.innerHeight, width: window.innerWidth };
+  }
+
+  const parentRect = scrollParent.getBoundingClientRect();
+
+  return {
+    top: parentRect.top + scrollParent.clientTop - elementRect.top,
+    left: parentRect.left + scrollParent.clientLeft - elementRect.left,
+    height: scrollParent.clientHeight,
+    width: scrollParent.clientWidth,
+  };
+};
+
 export const getScrollableParent = (element: HTMLElement, includeHidden: boolean): ScrollableElement => {
   let style = getComputedStyle(element);
   const excludeStaticParent = style.position === "absolute";

@@ -358,7 +358,7 @@ export const PartialArea: FC<PartialAreaProps> = React.memo(
                   borderRadius: "50%",
                 }}
                 onPointerDown={() => {
-                  getHiddenTargetFocusByIdx(id, focusedLocation.rowIndex, focusedLocation.colIndex)?.focus();
+                  getHiddenTargetFocusByIdx(store, focusedLocation.rowIndex, focusedLocation.colIndex)?.focus();
                   setCurrentBehavior(FillHandleBehavior);
                 }}
               />

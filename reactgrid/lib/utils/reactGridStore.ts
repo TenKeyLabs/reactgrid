@@ -6,15 +6,20 @@ import { isSpanMember } from "./isSpanMember.ts";
 import { ReactGridStore, ReactGridStoreProps } from "../types/ReactGridStore.ts";
 import { FillHandleBehavior } from "../behaviors/FillHandleBehavior.ts";
 import { ColumnReorderBehavior } from "../behaviors/ColumnReorderBehavior.ts";
-import { getHiddenTargetFocusByIdx } from "./getHiddenTargetFocusByIdx.ts";
+import { focusCell } from "./focusCell.ts";
 import { RowReorderBehavior } from "../behaviors/RowReorderBehavior.ts";
 import { ResizeColumnBehavior } from "../behaviors/ResizeColumnBehavior.ts";
+import { ALL_ROWS, RowRange } from "../types/InternalModel.ts";
+import { createCellElementsRegistry } from "./cellElementsRegistry.ts";
 
 type ReactGridStores = Record<string, StoreApi<ReactGridStore>>;
 
 export const reactGridStores = create<ReactGridStores>(() => ({}));
 
-const DEFAULT_STORE_PROPS: ReactGridStoreProps = {
+const NO_ROWS: RowRange = { startRowIdx: 0, endRowIdx: 0 };
+
+// The element registry is created per store, as sharing one default instance would mix up the cells of several grids.
+const DEFAULT_STORE_PROPS: Omit<ReactGridStoreProps, "cellElements"> = {
   id: "",
   // fields passed by the user
   rows: [],
@@ -52,8 +57,8 @@ const DEFAULT_STORE_PROPS: ReactGridStoreProps = {
   // internal state
   rowMeasurements: [],
   colMeasurements: [],
+  renderedRowRange: ALL_ROWS,
   focusedLocation: { rowIndex: -1, colIndex: -1 },
-  changedFocusedLocation: undefined, // used from reorder behaviors
   selectedArea: { startRowIdx: -1, endRowIdx: -1, startColIdx: -1, endColIdx: -1 },
   fillHandleArea: { startRowIdx: -1, endRowIdx: -1, startColIdx: -1, endColIdx: -1 },
   reactGridRef: undefined,
@@ -74,7 +79,10 @@ export function initReactGridStore(id: string, initialProps: Partial<ReactGridSt
       ...state,
       [id]: createStore<ReactGridStore>()((set, get) => ({
         ...DEFAULT_STORE_PROPS,
+        cellElements: createCellElementsRegistry(),
         ...initialProps,
+        // A virtualized grid starts empty so its first commit mounts the window rather than every row.
+        renderedRowRange: initialProps.virtualizeRows ? NO_ROWS : ALL_ROWS,
         id,
         behaviors: { ...DEFAULT_STORE_PROPS.behaviors, ...initialProps?.behaviors },
         getRowAmount: () => get().rows.length,
@@ -136,6 +144,8 @@ export function initReactGridStore(id: string, initialProps: Partial<ReactGridSt
 
         setColMeasurements: (colMeasurements) => set(() => ({ colMeasurements })),
 
+        setRenderedRowRange: (renderedRowRange) => set(() => ({ renderedRowRange })),
+
         setPaneRanges: (paneRanges) => set(() => ({ paneRanges })),
 
         getPaneRanges: () => {
@@ -144,7 +154,7 @@ export function initReactGridStore(id: string, initialProps: Partial<ReactGridSt
         },
 
         setFocusedLocation: (rowIndex, colIndex) => {
-          getHiddenTargetFocusByIdx(id, rowIndex, colIndex)?.focus();
+          focusCell(get(), rowIndex, colIndex);
           set(() => {
             return { focusedLocation: { rowIndex, colIndex } };
           });

@@ -1,4 +1,4 @@
-import React, { FC } from "react";
+import React, { FC, useCallback } from "react";
 import { useCellContext } from "./CellContext";
 import HiddenFocusTarget from "./HiddenFocusTarget";
 import { ColumnResizeBadge } from "./ColumnResizeBadge";
@@ -6,8 +6,9 @@ import { useReactGridStore } from "../utils/reactGridStore";
 import { useReactGridId } from "./ReactGridIdProvider";
 
 type CellWrapperProps = React.HTMLAttributes<HTMLDivElement> & {
-  onStringValueRequested: () => string;
-  onStringValueReceived: (v: string) => void;
+  /** Clipboard callbacks of templates that keep their value in component state; cells declaring them on the `Cell` itself need not pass them. */
+  onStringValueRequested?: () => string;
+  onStringValueReceived?: (v: string) => void;
   children?: React.ReactNode;
 };
 
@@ -31,16 +32,26 @@ const CellWrapper: FC<CellWrapperProps> = ({
 
   const cellsLookup = useReactGridStore(id, (store) => store.cellsLookup);
 
-  cellsLookup.set(`${ctx.realRowIndex} ${ctx.realColumnIndex}`, {
-    rowIndex: ctx.realRowIndex,
-    colIndex: ctx.realColumnIndex,
-    onStringValueRequested,
-    onStringValueReceived,
-  });
+  if (onStringValueRequested && onStringValueReceived) {
+    cellsLookup.set(`${ctx.realRowIndex} ${ctx.realColumnIndex}`, {
+      rowIndex: ctx.realRowIndex,
+      colIndex: ctx.realColumnIndex,
+      onStringValueRequested,
+      onStringValueReceived,
+    });
+  }
+
+  const cellElements = useReactGridStore(id, (store) => store.cellElements);
+
+  const registerContainer = useCallback(
+    (element: HTMLDivElement | null) => cellElements.registerContainer(ctx.realRowIndex, ctx.realColumnIndex, element),
+    [cellElements, ctx.realRowIndex, ctx.realColumnIndex]
+  );
 
   return (
     <div
       {...wrapperDivAttributes}
+      ref={registerContainer}
       className={`rgCellContainer rgRowIdx-${ctx.realRowIndex} rgColIdx-${ctx.realColumnIndex} ${
         customClassName ?? ""
       }`}

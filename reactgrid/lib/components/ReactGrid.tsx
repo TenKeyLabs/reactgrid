@@ -63,7 +63,12 @@ export const ReactGrid: FC<ReactGridProps> = ({
 
   const [bypassSizeWarning, setBypassSizeWarning] = useState(false);
 
-  if (devEnvironment && !bypassSizeWarning && cellMatrix.rows.length * cellMatrix.columns.length > 25_000) {
+  if (
+    devEnvironment &&
+    !bypassSizeWarning &&
+    !rgProps.virtualizeRows &&
+    cellMatrix.rows.length * cellMatrix.columns.length > 25_000
+  ) {
     return (
       <>
         <h1>You're about to render a huge grid!</h1>

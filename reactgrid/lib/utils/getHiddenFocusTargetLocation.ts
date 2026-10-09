@@ -1,33 +1,14 @@
-import { IndexedLocation } from "../types/InternalModel";
+import { IndexedLocation, NO_CELL_LOCATION } from "../types/InternalModel";
+import { ReactGridStore } from "../types/ReactGridStore";
 
-/**
- * Extracts row and column indexes from an element's class name.
- * Assumes the element's class name contains `rgFocusRowIdx-{rowIndex}` and `rgFocusColIdx-{colIndex}`.
- * @param targetElement The element from which to extract row and column indexes.
- * @returns An object containing the row and column indexes, or null if they cannot be extracted.
- */
-export const getHiddenFocusTargetLocation = (storeId: string, targetElement: Element): IndexedLocation => {
-  const container = document.getElementById(`ReactGrid-${storeId}`);
-
-  if (!container || !container.contains(targetElement)) {
-    return { rowIndex: -1, colIndex: -1 };
+/** The cell indexes carried by a hidden focus target element, or no location when the element is not one of this grid's. */
+export const getHiddenFocusTargetLocation = (store: ReactGridStore, targetElement: Element): IndexedLocation => {
+  if (!(targetElement instanceof HTMLElement) || !store.reactGridRef?.contains(targetElement)) {
+    return NO_CELL_LOCATION;
   }
 
-  const classList = targetElement.className.split(" ");
-  let rowIndex: number | null = null;
-  let colIndex: number | null = null;
+  const rowIndex = Number(targetElement.dataset.rowIndex);
+  const colIndex = Number(targetElement.dataset.colIndex);
 
-  classList.forEach((className) => {
-    if (className.startsWith("rgFocusRowIdx-")) {
-      rowIndex = parseInt(className.split("-")[1], 10);
-    } else if (className.startsWith("rgFocusColIdx-")) {
-      colIndex = parseInt(className.split("-")[1], 10);
-    }
-  });
-
-  if (rowIndex !== null && colIndex !== null) {
-    return { rowIndex, colIndex };
-  }
-
-  return { rowIndex: -1, colIndex: -1 };
+  return Number.isInteger(rowIndex) && Number.isInteger(colIndex) ? { rowIndex, colIndex } : NO_CELL_LOCATION;
 };

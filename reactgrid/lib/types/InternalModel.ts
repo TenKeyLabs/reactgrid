@@ -52,6 +52,14 @@ export interface IndexedLocation {
   colIndex: number;
 }
 
+export type RowRange = {
+  startRowIdx: number;
+  endRowIdx: number;
+};
+
+/** Every row is rendered; the rendered range narrows only when row virtualization is enabled. */
+export const ALL_ROWS: RowRange = { startRowIdx: 0, endRowIdx: Number.POSITIVE_INFINITY };
+
 export type FocusedCell = Cell & {
   rowIndex: number;
   colIndex: number;

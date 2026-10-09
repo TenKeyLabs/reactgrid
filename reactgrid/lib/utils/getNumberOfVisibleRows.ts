@@ -1,32 +1,19 @@
 import { ReactGridStore } from "../types/ReactGridStore";
-import { getCellContainer } from "./getCellContainer";
-import { isCellInRange } from "./isCellInRange";
-import { isInViewport } from "./isInViewport";
+import { getTheme } from "./getTheme";
+import { getValueFromPixelString } from "./getValueFromPixelString";
+import { getStickyRowsHeights } from "./scrollCellIntoView";
+import { getScrollableParent, getScrollViewport } from "./scrollHelpers";
 
-export const getNumberOfVisibleRows = (store: ReactGridStore, columnIdx: number) => {
-  const scrollableParent = store.reactGridRef!;
-  let visibleCells = 0;
+/** How many rows of the given row's height fit in the viewport beside the sticky rows. */
+export const getNumberOfVisibleRows = (store: ReactGridStore, rowIndex: number) => {
+  const gridElement = store.reactGridRef;
+  const row = store.rowMeasurements[rowIndex];
 
-  if (columnIdx === undefined) return 0;
+  if (!gridElement || !row) return 0;
 
-  // Get all cells in the current column
-  const cellsInCol = store.getColumnCells(columnIdx);
+  const viewport = getScrollViewport(getScrollableParent(gridElement, false) ?? window, gridElement);
+  const gapWidth = getValueFromPixelString(getTheme(store).gap.width || 0);
+  const stickyRows = getStickyRowsHeights(store, gapWidth);
 
-  // Find the last cell in the viewport
-  for (const cell of cellsInCol) {
-    const currentCellContainer = getCellContainer(store, cell);
-
-    if (!currentCellContainer) continue;
-
-    if (
-      isInViewport(currentCellContainer, scrollableParent) &&
-      (isCellInRange(store, cell, store.paneRanges.Left) ||
-        isCellInRange(store, cell, store.paneRanges.Center) ||
-        isCellInRange(store, cell, store.paneRanges.Right))
-    ) {
-      visibleCells++;
-    }
-  }
-
-  return visibleCells;
+  return Math.max(0, Math.floor((viewport.height - stickyRows.top - stickyRows.bottom) / (row.height + gapWidth)));
 };

@@ -1,7 +1,8 @@
 import React, { CSSProperties, useCallback, useEffect, useRef } from "react";
 import { NumericalRange } from "../types/PublicModel";
-import { EMPTY_AREA, GetCellOffsets, PaneName, StickyOffsets } from "../types/InternalModel";
+import { ALL_ROWS, EMPTY_AREA, GetCellOffsets, PaneName, StickyOffsets } from "../types/InternalModel";
 import { isSpanMember } from "../utils/isSpanMember";
+import { getRowIndexesToRender } from "../utils/renderedRows";
 import { areAreasEqual } from "../utils/areAreasEqual";
 import { reactGridStores, useReactGridStore } from "../utils/reactGridStore";
 import { useTheme } from "../hooks/useTheme";
@@ -16,6 +17,7 @@ import { DefaultBehavior } from "../behaviors/DefaultBehavior";
 import { ColumnReorderBehavior } from "../behaviors/ColumnReorderBehavior";
 
 interface PaneGridContentProps {
+  paneName: PaneName;
   range: NumericalRange;
   className?: string;
   style?: React.CSSProperties;
@@ -52,17 +54,25 @@ const shouldMemoGridContent = (prevProps: PaneGridContentProps, nextProps: PaneG
 };
 
 export const PaneGridContent: React.FC<PaneGridContentProps> = React.memo(
-  ({ range, getCellOffset = () => ({}), stickyOffsets }) => {
-    const { startRowIdx, endRowIdx, startColIdx, endColIdx } = range;
+  ({ paneName, range, getCellOffset = () => ({}), stickyOffsets }) => {
+    const { startRowIdx, startColIdx, endColIdx } = range;
 
     const id = useReactGridId();
     const store = reactGridStores()[id].getState();
 
-    const rows = useReactGridStore(id, (store) => store.rows).slice(startRowIdx, endRowIdx);
     const columns = useReactGridStore(id, (store) => store.columns).slice(startColIdx, endColIdx);
     const cells = useReactGridStore(id, (store) => store.cells);
     const focusedCell = useReactGridStore(id, (store) => store.focusedLocation);
     const selectedArea = useReactGridStore(id, (store) => store.selectedArea);
+    const renderedRowRange = useReactGridStore(id, (store) => store.renderedRowRange);
+
+    // Sticky row panes always mount in full; only the panes that scroll vertically are clipped to the rendered rows.
+    const isVerticallyScrollable = paneName === "Left" || paneName === "Center" || paneName === "Right";
+    const rowIndexes = getRowIndexesToRender(
+      range,
+      isVerticallyScrollable ? renderedRowRange : ALL_ROWS,
+      focusedCell.rowIndex
+    );
 
     const currentBehavior = useReactGridStore(id, (store) => store.currentBehavior);
     const prevBehaviorId = useRef(currentBehavior.id);
@@ -78,14 +88,15 @@ export const PaneGridContent: React.FC<PaneGridContentProps> = React.memo(
 
     const memoizedGetCellOffset = useCallback(getCellOffset, [stickyOffsets]);
 
-    return rows.map((_, rowIndex) => {
+    // A single keyed list, so cells keep their identity (and focus) when the rendered window shifts.
+    return rowIndexes.flatMap((realRowIndex) => {
+      const rowIndex = realRowIndex - startRowIdx;
+
       return columns.map((_, colIndex) => {
-        const cell = cells.get(`${startRowIdx + rowIndex} ${startColIdx + colIndex}`);
+        const realColumnIndex = startColIdx + colIndex;
+        const cell = cells.get(`${realRowIndex} ${realColumnIndex}`);
 
         if (!cell || isSpanMember(cell)) return null;
-
-        const realRowIndex = startRowIdx + rowIndex;
-        const realColumnIndex = startColIdx + colIndex;
 
         let shouldRenderReorderedCells = false;
 
@@ -223,7 +234,12 @@ export const Pane: React.FC<PaneProps> = ({
           style={getPaneBackgroundStyle(paneName, gridContentRange, theme.gap)}
         />
       )}
-      <PaneGridContent range={gridContentRange} getCellOffset={getCellOffset} stickyOffsets={stickyOffsets} />
+      <PaneGridContent
+        paneName={paneName}
+        range={gridContentRange}
+        getCellOffset={getCellOffset}
+        stickyOffsets={stickyOffsets}
+      />
       {isFillHandleActive && (
         <PartialArea
           areaRange={fillHandleArea}
