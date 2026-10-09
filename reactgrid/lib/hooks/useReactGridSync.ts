@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { CellMatrix } from "../types/CellMatrix";
 import { ReactGridStore, ReactGridStoreProps } from "../types/ReactGridStore";
 import isEqual from "lodash.isequal";
+import { reuseUnchangedRows } from "../utils/cellsByRow";
 
 export const useReactGridSync = (
   store: ReactGridStore | undefined,
@@ -32,9 +33,13 @@ export const useReactGridSync = (
     // The matrix is memoized on the consumer's arrays, so a new one means changed cells; a deep compare would cost more than the update.
     if (store && cellMatrix.cells !== store.cells) {
       // Callbacks declared on the cells replace their previous versions; the ones registered by mounted CellWrappers are kept.
-      const cellsLookup = new Map([...store.cellsLookup, ...cellMatrix.cellsLookup]);
+      // The lookup is a registry read on demand, so it is updated in place rather than copied for every change.
+      cellMatrix.cellsLookup.forEach((entry, key) => store.cellsLookup.set(key, entry));
 
-      store.setExternalData({ cells: cellMatrix.cells, cellsLookup });
+      store.setExternalData({
+        cells: cellMatrix.cells,
+        cellsByRow: reuseUnchangedRows(cellMatrix.cellsByRow, store.cellsByRow),
+      });
     }
   }, [cellMatrix.cells]);
 };

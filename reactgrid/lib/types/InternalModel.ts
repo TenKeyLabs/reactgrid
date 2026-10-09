@@ -14,6 +14,9 @@ export type SpanMember = {
   originColIndex: number;
 };
 
+/** One row of the matrix indexed by column; kept referentially stable while none of its cells change. */
+export type RowCells = (Cell | SpanMember)[];
+
 export type Position = {
   x: number;
   y: number;

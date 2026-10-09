@@ -1,10 +1,11 @@
 import { useCallback } from "react";
-import { useReactGridStore } from "../utils/reactGridStore";
+import { reactGridStores } from "../utils/reactGridStore";
 import { useReactGridId } from "./ReactGridIdProvider";
 
 const HiddenFocusTarget = ({ rowIdx, colIdx }: { colIdx: number; rowIdx: number }) => {
   const storeId = useReactGridId();
-  const cellElements = useReactGridStore(storeId, (store) => store.cellElements);
+  // The registry never changes identity, so it is read without a per-cell store subscription.
+  const { cellElements } = reactGridStores()[storeId].getState();
 
   const registerFocusTarget = useCallback(
     (element: HTMLInputElement | null) => cellElements.registerFocusTarget(rowIdx, colIdx, element),
