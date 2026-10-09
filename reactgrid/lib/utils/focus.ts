@@ -4,23 +4,14 @@ import { getOriginCell } from "./getOriginCell.ts";
 import { EMPTY_AREA } from "../types/InternalModel.ts";
 import { ReactGridStore } from "../types/ReactGridStore.ts";
 import { emitEvent } from "./emitEvent.ts";
-import { getScrollableParent } from "./scrollHelpers.ts";
-import { getCellContainer } from "./getCellContainer.ts";
-import { handlePaneOverlap } from "./handlePaneOverlap.ts";
-import { getHiddenTargetFocusByIdx } from "./getHiddenTargetFocusByIdx.ts";
+import { focusCell } from "./focusCell.ts";
 import { getCellArea } from "./getCellArea.ts";
 
 export const moveFocusUp = (store: ReactGridStore, currentFocus: FocusedCell): Partial<ReactGridStore> => {
   if (currentFocus.rowIndex === 0) {
-    getHiddenTargetFocusByIdx(store.id, currentFocus.rowIndex, currentFocus.colIndex)?.focus();
+    focusCell(store, currentFocus.rowIndex, currentFocus.colIndex);
     return store;
   }
-
-  const cellContainer = getCellContainer(store, currentFocus);
-
-  if (!cellContainer) return store;
-
-  const scrollableParent = (getScrollableParent(cellContainer, true) as Element) ?? store.reactGridRef!;
 
   const colIndex =
     "colSpan" in currentFocus && store.focusedLocation.colIndex !== -1
@@ -37,9 +28,7 @@ export const moveFocusUp = (store: ReactGridStore, currentFocus: FocusedCell): P
 
       emitEvent("focuschange", { currentFocus });
 
-      handlePaneOverlap(store, rowIndex, colIndex, scrollableParent);
-
-      getHiddenTargetFocusByIdx(store.id, originCell.rowIndex, originCell.colIndex)?.focus();
+      focusCell(store, originCell.rowIndex, originCell.colIndex);
 
       return {
         selectedArea: EMPTY_AREA,
@@ -52,15 +41,9 @@ export const moveFocusUp = (store: ReactGridStore, currentFocus: FocusedCell): P
 
 export const moveFocusRight = (store: ReactGridStore, currentFocus: FocusedCell) => {
   if (currentFocus.colIndex === store.columns.length - 1) {
-    getHiddenTargetFocusByIdx(store.id, currentFocus.rowIndex, currentFocus.colIndex)?.focus();
+    focusCell(store, currentFocus.rowIndex, currentFocus.colIndex);
     return store;
   }
-
-  const cellContainer = getCellContainer(store, currentFocus);
-
-  if (!cellContainer) return store;
-
-  const scrollableParent = (getScrollableParent(cellContainer, true) as Element) ?? store.reactGridRef!;
 
   const rowIndex =
     "rowSpan" in currentFocus && store.focusedLocation.rowIndex !== -1
@@ -81,9 +64,7 @@ export const moveFocusRight = (store: ReactGridStore, currentFocus: FocusedCell)
 
       emitEvent("focuschange", { currentFocus });
 
-      handlePaneOverlap(store, rowIndex, colIndex, scrollableParent);
-
-      getHiddenTargetFocusByIdx(store.id, originCell.rowIndex, originCell.colIndex)?.focus();
+      focusCell(store, originCell.rowIndex, originCell.colIndex);
 
       return {
         selectedArea: EMPTY_AREA,
@@ -96,22 +77,16 @@ export const moveFocusRight = (store: ReactGridStore, currentFocus: FocusedCell)
 
 export const moveFocusDown = (store: ReactGridStore, currentFocus: FocusedCell) => {
   if (currentFocus.rowIndex === store.rows.length - 1) {
-    getHiddenTargetFocusByIdx(store.id, currentFocus.rowIndex, currentFocus.colIndex)?.focus();
+    focusCell(store, currentFocus.rowIndex, currentFocus.colIndex);
     return store;
   }
 
   const cellArea = getCellArea(store, currentFocus);
 
   if (cellArea.endRowIdx === store.rows.length) {
-    getHiddenTargetFocusByIdx(store.id, currentFocus.rowIndex, currentFocus.colIndex)?.focus();
+    focusCell(store, currentFocus.rowIndex, currentFocus.colIndex);
     return store;
   }
-
-  const cellContainer = getCellContainer(store, currentFocus);
-
-  if (!cellContainer) return store;
-
-  const scrollableParent = (getScrollableParent(cellContainer, true) as Element) ?? store.reactGridRef!;
 
   const colIndex =
     "colSpan" in currentFocus && store.focusedLocation.colIndex !== -1
@@ -128,9 +103,7 @@ export const moveFocusDown = (store: ReactGridStore, currentFocus: FocusedCell) 
 
       emitEvent("focuschange", { currentFocus });
 
-      handlePaneOverlap(store, rowIndex, colIndex, scrollableParent);
-
-      getHiddenTargetFocusByIdx(store.id, originCell.rowIndex, originCell.colIndex)?.focus();
+      focusCell(store, originCell.rowIndex, originCell.colIndex);
 
       return {
         selectedArea: EMPTY_AREA,
@@ -143,15 +116,9 @@ export const moveFocusDown = (store: ReactGridStore, currentFocus: FocusedCell) 
 
 export const moveFocusLeft = (store: ReactGridStore, currentFocus: FocusedCell) => {
   if (currentFocus.colIndex === 0) {
-    getHiddenTargetFocusByIdx(store.id, currentFocus.rowIndex, currentFocus.colIndex)?.focus();
+    focusCell(store, currentFocus.rowIndex, currentFocus.colIndex);
     return store;
   }
-
-  const cellContainer = getCellContainer(store, currentFocus);
-
-  if (!cellContainer) return store;
-
-  const scrollableParent = (getScrollableParent(cellContainer, true) as Element) ?? store.reactGridRef!;
 
   const rowIndex =
     "rowSpan" in currentFocus && store.focusedLocation.rowIndex !== -1
@@ -168,9 +135,7 @@ export const moveFocusLeft = (store: ReactGridStore, currentFocus: FocusedCell) 
 
       emitEvent("focuschange", { currentFocus });
 
-      handlePaneOverlap(store, rowIndex, colIndex, scrollableParent);
-
-      getHiddenTargetFocusByIdx(store.id, originCell.rowIndex, originCell.colIndex)?.focus();
+      focusCell(store, originCell.rowIndex, originCell.colIndex);
 
       return {
         selectedArea: EMPTY_AREA,
@@ -214,7 +179,7 @@ export const moveFocusInsideSelectedRange = (
         nextPossibleLocation?.isFocusable === false
       );
 
-      getHiddenTargetFocusByIdx(store.id, rowIdx, colIdx)?.focus();
+      focusCell(store, rowIdx, colIdx);
 
       return store;
     }
@@ -246,7 +211,7 @@ export const moveFocusInsideSelectedRange = (
         nextPossibleLocation?.isFocusable === false
       );
 
-      getHiddenTargetFocusByIdx(store.id, rowIdx, colIdx)?.focus();
+      focusCell(store, rowIdx, colIdx);
 
       return store;
     }
@@ -278,7 +243,7 @@ export const moveFocusInsideSelectedRange = (
         nextPossibleLocation?.isFocusable === false
       );
 
-      getHiddenTargetFocusByIdx(store.id, rowIdx, colIdx)?.focus();
+      focusCell(store, rowIdx, colIdx);
 
       return store;
     }
@@ -290,7 +255,7 @@ export const moveFocusInsideSelectedRange = (
       let nextPossibleLocation = store.getCellOrSpanMemberByIndexes(rowIdx, colIdx);
 
       if (rowIdx === 0) {
-        getHiddenTargetFocusByIdx(store.id, rowIdx, colIdx)?.focus();
+        focusCell(store, rowIdx, colIdx);
         return store;
       }
 
@@ -317,7 +282,7 @@ export const moveFocusInsideSelectedRange = (
 
       emitEvent("focuschange", { currentFocus });
 
-      getHiddenTargetFocusByIdx(store.id, rowIdx, colIdx)?.focus();
+      focusCell(store, rowIdx, colIdx);
 
       return store;
     }

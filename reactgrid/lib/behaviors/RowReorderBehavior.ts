@@ -3,6 +3,7 @@ import { ReactGridStore } from "../types/ReactGridStore.ts";
 import { calcSelectedAreaHeight } from "../utils/calcSelectedAreaHeight.ts";
 import { findMinimalSelectedArea } from "../utils/findMinimalSelectedArea.ts";
 import { getCellContainer } from "../utils/getCellContainer.ts";
+import { focusCell } from "../utils/focusCell.ts";
 import { getCellContainerFromPoint } from "../utils/getCellContainerFromPoint.ts";
 import { getCellIndexesFromContainerElement } from "../utils/getCellIndexes.ts";
 import { getCellIndexesFromPointerLocation } from "../utils/getCellIndexesFromPointerLocation.ts";
@@ -47,7 +48,7 @@ export const RowReorderBehavior: Behavior = {
     const hiddenFocusTarget = document.activeElement;
     if (!hiddenFocusTarget) return store;
 
-    const { rowIndex, colIndex } = getHiddenFocusTargetLocation(store.id, hiddenFocusTarget);
+    const { rowIndex, colIndex } = getHiddenFocusTargetLocation(store, hiddenFocusTarget);
     if (rowIndex === -1 || colIndex === -1) return store;
 
     return {
@@ -425,9 +426,10 @@ const handlePointerUp = (
       console.error(e);
     }
 
+    focusCell(store, newFocusedLocation.rowIndex, newFocusedLocation.colIndex);
+
     return {
       currentBehavior: store.getBehavior("Default"),
-      changedFocusedLocation: newFocusedLocation,
       selectedArea: {
         startRowIdx: store.rows.length - 1 - (selectedRowIndexes.length - 1),
         endRowIdx: store.rows.length,
@@ -453,9 +455,10 @@ const handlePointerUp = (
       console.error(e);
     }
 
+    focusCell(store, newFocusedLocation.rowIndex, newFocusedLocation.colIndex);
+
     return {
       currentBehavior: store.getBehavior("Default"),
-      changedFocusedLocation: newFocusedLocation,
       selectedArea: {
         startRowIdx: 0,
         endRowIdx: 0 + selectedRowIndexes.length,
@@ -484,9 +487,10 @@ const handlePointerUp = (
     console.error(e);
   }
 
+  focusCell(store, newFocusedLocation.rowIndex, newFocusedLocation.colIndex);
+
   return {
     currentBehavior: store.getBehavior("Default"),
-    changedFocusedLocation: newFocusedLocation,
     selectedArea: {
       startRowIdx: isUpDirection ? destinationRowIdx : destinationRowIdx - (selectedRowIndexes.length - 1),
       endRowIdx: isUpDirection ? destinationRowIdx + selectedRowIndexes.length : destinationRowIdx + 1,

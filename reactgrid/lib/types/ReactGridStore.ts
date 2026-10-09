@@ -1,11 +1,12 @@
 import { Cell, Column, Range, RGThemeType, Row, StyledRange } from "./PublicModel.ts";
 import { RowMeasurement } from "./RowMeasurement.ts";
 import { ColumnMeasurement } from "./ColumnMeasurement.ts";
-import { CellMap, FocusedCell, IndexedLocation, PaneName, SpanMember } from "./InternalModel.ts";
+import { CellMap, FocusedCell, IndexedLocation, PaneName, RowRange, SpanMember } from "./InternalModel.ts";
 import { NumericalRange } from "./PublicModel.ts";
 import { Behavior, BehaviorId } from "./Behavior.ts";
 import { RGTheme } from "./RGTheme.ts";
 import { CellsLookup } from "./PublicModel.ts";
+import { CellElementsRegistry } from "../utils/cellElementsRegistry.ts";
 
 export interface ReactGridStoreProps {
   id: string;
@@ -14,6 +15,7 @@ export interface ReactGridStoreProps {
 
   cells: CellMap;
   cellsLookup: CellsLookup;
+  cellElements: CellElementsRegistry;
 
   rowMeasurements: RowMeasurement[];
   colMeasurements: ColumnMeasurement[];
@@ -23,8 +25,11 @@ export interface ReactGridStoreProps {
 
   styles?: RGThemeType;
 
+  virtualizeRows?: boolean;
+  rowOverscanRatio?: number;
+  renderedRowRange: RowRange;
+
   focusedLocation: IndexedLocation;
-  changedFocusedLocation?: IndexedLocation;
   selectedArea: NumericalRange;
   fillHandleArea: NumericalRange;
 
@@ -94,6 +99,8 @@ export interface ReactGridStore extends ReactGridStoreProps {
 
   readonly setRowMeasurements: (rowMeasurements: RowMeasurement[]) => void;
   readonly setColMeasurements: (colMeasurements: ColumnMeasurement[]) => void;
+
+  readonly setRenderedRowRange: (renderedRowRange: RowRange) => void;
 
   readonly getPaneRanges: () => Record<PaneName, NumericalRange>;
   readonly setPaneRanges: (paneRanges: Record<PaneName, NumericalRange>) => void;

@@ -69,12 +69,20 @@ export const cellMatrixBuilder = (
           originColIndex: colIndex,
         };
 
-        cellsLookup.set(`${currentRowIndex} ${currentColIndex}`, {});
         cells.set(`${currentRowIndex} ${currentColIndex}`, spanMember);
       }
     }
 
-    cellsLookup.set(`${rowIndex} ${colIndex}`, {});
+    // Cells declaring their clipboard callbacks are reachable without being mounted; the others register from CellWrapper while rendered.
+    if (args.onStringValueRequested || args.onStringValueReceived) {
+      cellsLookup.set(`${rowIndex} ${colIndex}`, {
+        rowIndex,
+        colIndex,
+        onStringValueRequested: args.onStringValueRequested ?? (() => ""),
+        onStringValueReceived: args.onStringValueReceived ?? (() => {}),
+      });
+    }
+
     cells.set(`${rowIndex} ${colIndex}`, cell);
   };
 

@@ -8,7 +8,7 @@ import { resizeSelectionInDirection } from "./resizeSelectionInDirection.ts";
 import { ReactGridStore } from "../types/ReactGridStore.ts";
 import React from "react";
 import { getNumberOfVisibleRows } from "./getNumberOfVisibleRows.ts";
-import { getHiddenTargetFocusByIdx } from "./getHiddenTargetFocusByIdx.ts";
+import { focusCell } from "./focusCell.ts";
 import { isInPaneRange } from "./isInPaneRange.ts";
 import { isCellInRange } from "./isCellInRange.ts";
 import { isPaneExists } from "./isPaneExists.ts";
@@ -203,7 +203,7 @@ export const handleKeyDown = (
       case "Home": {
         event.preventDefault();
 
-        getHiddenTargetFocusByIdx(store.id, 0, 0)?.focus({ preventScroll: true });
+        focusCell(store, 0, 0);
 
         return store;
       }
@@ -211,9 +211,7 @@ export const handleKeyDown = (
       case "End": {
         event.preventDefault();
 
-        getHiddenTargetFocusByIdx(store.id, store.rows.length - 1, store.columns.length - 1)?.focus({
-          preventScroll: true,
-        });
+        focusCell(store, store.rows.length - 1, store.columns.length - 1);
 
         return store;
       }
@@ -223,7 +221,7 @@ export const handleKeyDown = (
         event.preventDefault();
         if (!focusedCell) return store;
 
-        getHiddenTargetFocusByIdx(store.id, 0, store.focusedLocation.colIndex)?.focus({ preventScroll: true });
+        focusCell(store, 0, store.focusedLocation.colIndex);
 
         return { selectedArea: EMPTY_AREA };
       }
@@ -232,9 +230,7 @@ export const handleKeyDown = (
         event.preventDefault();
         if (!focusedCell) return store;
 
-        getHiddenTargetFocusByIdx(store.id, store.rows.length - 1, store.focusedLocation.colIndex)?.focus({
-          preventScroll: true,
-        });
+        focusCell(store, store.rows.length - 1, store.focusedLocation.colIndex);
 
         return {
           selectedArea: EMPTY_AREA,
@@ -245,9 +241,7 @@ export const handleKeyDown = (
         event.preventDefault();
         if (!focusedCell) return store;
 
-        getHiddenTargetFocusByIdx(store.id, store.focusedLocation.rowIndex, 0)?.focus({
-          preventScroll: true,
-        });
+        focusCell(store, store.focusedLocation.rowIndex, 0);
 
         return { selectedArea: EMPTY_AREA };
       }
@@ -256,9 +250,7 @@ export const handleKeyDown = (
         event.preventDefault();
         if (!focusedCell) return store;
 
-        getHiddenTargetFocusByIdx(store.id, store.focusedLocation.rowIndex, store.columns.length - 1)?.focus({
-          preventScroll: true,
-        });
+        focusCell(store, store.focusedLocation.rowIndex, store.columns.length - 1);
 
         return {
           selectedArea: EMPTY_AREA,
@@ -318,7 +310,7 @@ export const handleKeyDown = (
         // Get currently selected area
         let currentSelectedArea: NumericalRange = { ...store.selectedArea };
 
-        const numberOfVisibleRows: number = getNumberOfVisibleRows(store, focusedCell.colIndex);
+        const numberOfVisibleRows: number = getNumberOfVisibleRows(store, focusedCell.rowIndex);
 
         // If there is no selected area, get focused cell area
         const isAnyAreaSelected = !areAreasEqual(currentSelectedArea, EMPTY_AREA);
@@ -370,7 +362,7 @@ export const handleKeyDown = (
         // Get currently selected area
         let currentSelectedArea: NumericalRange = { ...store.selectedArea };
 
-        const numberOfVisibleRows: number = getNumberOfVisibleRows(store, focusedCell.colIndex);
+        const numberOfVisibleRows: number = getNumberOfVisibleRows(store, focusedCell.rowIndex);
 
         // If there is no selected area, get focused cell area
         const isAnyAreaSelected = !areAreasEqual(currentSelectedArea, EMPTY_AREA);
@@ -555,9 +547,7 @@ export const handleKeyDown = (
   switch (event.key) {
     // Move focus to next cell.
     case "Escape": {
-      getHiddenTargetFocusByIdx(store.id, focusedCell.rowIndex, focusedCell.colIndex)?.focus({
-        preventScroll: true,
-      });
+      focusCell(store, focusedCell.rowIndex, focusedCell.colIndex);
 
       return store;
     }
@@ -645,9 +635,7 @@ export const handleKeyDown = (
     case "Home": {
       event.preventDefault();
 
-      getHiddenTargetFocusByIdx(store.id, focusedCell.rowIndex, 0)?.focus({
-        preventScroll: true,
-      });
+      focusCell(store, focusedCell.rowIndex, 0);
 
       return {
         // If any area is selected, remove it.
@@ -657,9 +645,7 @@ export const handleKeyDown = (
     case "End": {
       event.preventDefault();
 
-      getHiddenTargetFocusByIdx(store.id, focusedCell.rowIndex, store.columns.length - 1)?.focus({
-        preventScroll: true,
-      });
+      focusCell(store, focusedCell.rowIndex, store.columns.length - 1);
 
       return {
         // If any area is selected, remove it.

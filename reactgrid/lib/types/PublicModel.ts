@@ -39,6 +39,14 @@ export type Cell = {
   isFocusable?: boolean;
   /** Marks a cell as selectable or not */
   isSelectable?: boolean;
+  /**
+   * Serializes the cell's value for copy, cut and fill operations.
+   * Declaring it on the cell (instead of passing it to `CellWrapper`) keeps the cell addressable while it is not mounted,
+   * which is what lets `virtualizeRows` paste into, fill or clear rows outside the rendered window.
+   */
+  onStringValueRequested?: () => string;
+  /** Receives a pasted, filled or cleared string value. See `onStringValueRequested`. */
+  onStringValueReceived?: (value: string) => void;
 };
 
 export type CellsLookupCallbacks = {
@@ -133,6 +141,15 @@ export interface ReactGridProps {
   initialSelectedRange?: Range;
 
   moveRightOnEnter?: boolean;
+
+  /**
+   * Mounts only the rows scrolled into view (plus a margin) instead of the whole grid.
+   * Requires pixel row heights, and cells that declare `onStringValueRequested`/`onStringValueReceived` to stay
+   * reachable by clipboard and fill operations while unmounted.
+   */
+  virtualizeRows?: boolean;
+  /** With `virtualizeRows`, the fraction of the viewport height kept mounted beyond each viewport edge (default 0.5). */
+  rowOverscanRatio?: number;
 
   onFocusLocationChanging?: ({ location }: { location: IndexedLocation }) => boolean;
   onFocusLocationChanged?: ({ location }: { location: IndexedLocation }) => void;

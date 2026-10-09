@@ -30,7 +30,10 @@ export const useReactGridSync = (
   // sync cells with store
   useEffect(() => {
     if (store && !isEqual(cellMatrix.cells, store.cells)) {
-      store.setExternalData({ cells: cellMatrix.cells });
+      // Callbacks declared on the cells replace their previous versions; the ones registered by mounted CellWrappers are kept.
+      const cellsLookup = new Map([...store.cellsLookup, ...cellMatrix.cellsLookup]);
+
+      store.setExternalData({ cells: cellMatrix.cells, cellsLookup });
     }
   }, [cellMatrix.cells]);
 };

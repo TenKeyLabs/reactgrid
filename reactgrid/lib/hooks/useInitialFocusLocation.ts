@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { ReactGridProps } from "../types/PublicModel";
-import { getHiddenTargetFocusByIdx } from "../utils/getHiddenTargetFocusByIdx";
+import { focusCell } from "../utils/focusCell";
 import { isSpanMember } from "../utils/isSpanMember";
 import { ReactGridStore } from "../types/ReactGridStore";
 
@@ -27,7 +27,7 @@ export const useInitialFocusLocation = (
           console.error("The provided 'initialFocusLocation' is invalid as it targets !");
       }
 
-      getHiddenTargetFocusByIdx(store.id, rowIndex, colIndex)?.focus();
+      focusCell(store, rowIndex, colIndex);
     }
   }, []);
 };

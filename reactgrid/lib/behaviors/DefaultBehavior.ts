@@ -6,10 +6,9 @@ import { getCellContainerLocation } from "../utils/getCellContainerLocation.ts";
 import { handleKeyDown } from "../utils/handleKeyDown.ts";
 import { isCellInRange } from "../utils/isCellInRange.ts";
 import isDevEnvironment from "../utils/isDevEnvironment.ts";
-import { getScrollableParent } from "../utils/scrollHelpers.ts";
 import { ColumnReorderBehavior } from "./ColumnReorderBehavior.ts";
 import { RowReorderBehavior } from "./RowReorderBehavior.ts";
-import { handlePaneOverlap } from "../utils/handlePaneOverlap.ts";
+import { scrollCellIntoView } from "../utils/scrollCellIntoView.ts";
 import { getHiddenTargetFocusByIdx } from "../utils/getHiddenTargetFocusByIdx.ts";
 import { EMPTY_AREA } from "../types/InternalModel.ts";
 import { selectEntireColumn } from "../utils/selectEntireColumn.ts";
@@ -36,9 +35,7 @@ export const DefaultBehavior = (): Behavior => ({
 
     const { rowIndex, colIndex } = getCellContainerLocation(cellContainer);
 
-    const scrollableParent = (getScrollableParent(cellContainer, true) as Element) ?? store.reactGridRef;
-
-    handlePaneOverlap(store, rowIndex, colIndex, scrollableParent);
+    scrollCellIntoView(store, rowIndex, colIndex);
 
     const focusingCell = store.getCellByIndexes(rowIndex, colIndex);
     if (!focusingCell) return store;
@@ -100,7 +97,7 @@ export const DefaultBehavior = (): Behavior => ({
 
     if (shouldChangeFocusLocation) {
       if (focusingCell?.isFocusable !== false) {
-        getHiddenTargetFocusByIdx(store.id, rowIndex, colIndex)?.focus({ preventScroll: true });
+        getHiddenTargetFocusByIdx(store, rowIndex, colIndex)?.focus({ preventScroll: true });
       }
 
       return {
@@ -126,7 +123,7 @@ export const DefaultBehavior = (): Behavior => ({
     const hiddenFocusTarget = document.activeElement;
     if (!hiddenFocusTarget) return store;
 
-    const { rowIndex, colIndex } = getHiddenFocusTargetLocation(store.id, hiddenFocusTarget);
+    const { rowIndex, colIndex } = getHiddenFocusTargetLocation(store, hiddenFocusTarget);
     if (rowIndex === -1 || colIndex === -1) return store;
 
     return {
@@ -222,7 +219,7 @@ export const DefaultBehavior = (): Behavior => ({
     if (shouldChangeFocusLocation) {
       if (shouldSelectEntireColumn || shouldSelectEntireRow) {
         if (touchedCell?.isFocusable !== false) {
-          getHiddenTargetFocusByIdx(store.id, rowIndex, colIndex)?.focus({ preventScroll: true });
+          getHiddenTargetFocusByIdx(store, rowIndex, colIndex)?.focus({ preventScroll: true });
         }
 
         return {
@@ -276,9 +273,7 @@ export const DefaultBehavior = (): Behavior => ({
 
     const focusedCell = store.getCellByIndexes(rowIndex, colIndex);
 
-    const scrollableParent = (getScrollableParent(cellContainer, true) as Element) ?? store.reactGridRef!;
-
-    handlePaneOverlap(store, rowIndex, colIndex, scrollableParent);
+    scrollCellIntoView(store, rowIndex, colIndex);
 
     const prevElement = getCellContainerByIndexes(store, store.pointerStartIdx);
     const currElement = getCellContainerByIndexes(store, { rowIndex, colIndex });
@@ -292,7 +287,7 @@ export const DefaultBehavior = (): Behavior => ({
 
       if (prevCell.rowIndex === currCell.rowIndex && prevCell.colIndex === currCell.colIndex) {
         if (!shouldSelectEntireColumn && focusedCell?.isFocusable !== false) {
-          getHiddenTargetFocusByIdx(store.id, rowIndex, colIndex)?.focus({ preventScroll: true });
+          getHiddenTargetFocusByIdx(store, rowIndex, colIndex)?.focus({ preventScroll: true });
         }
 
         if (!shouldSelectEntireColumn && !shouldSelectEntireRow) {

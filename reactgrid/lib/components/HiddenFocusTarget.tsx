@@ -1,21 +1,22 @@
-import { useEffect } from "react";
+import { useCallback } from "react";
 import { useReactGridStore } from "../utils/reactGridStore";
 import { useReactGridId } from "./ReactGridIdProvider";
-import { getHiddenTargetFocusByIdx } from "../utils/getHiddenTargetFocusByIdx";
 
 const HiddenFocusTarget = ({ rowIdx, colIdx }: { colIdx: number; rowIdx: number }) => {
   const storeId = useReactGridId();
-  const changedFocusedLocation = useReactGridStore(storeId, (store) => store.changedFocusedLocation);
+  const cellElements = useReactGridStore(storeId, (store) => store.cellElements);
 
-  useEffect(() => {
-    if (changedFocusedLocation) {
-      getHiddenTargetFocusByIdx(storeId, changedFocusedLocation.rowIndex, changedFocusedLocation.colIndex)?.focus();
-    }
-  }, [changedFocusedLocation]);
+  const registerFocusTarget = useCallback(
+    (element: HTMLInputElement | null) => cellElements.registerFocusTarget(rowIdx, colIdx, element),
+    [cellElements, rowIdx, colIdx]
+  );
 
   return (
     <div style={{ position: "absolute", bottom: 0, right: "50%" }}>
       <input
+        ref={registerFocusTarget}
+        data-row-index={rowIdx}
+        data-col-index={colIdx}
         onKeyDown={(e) => {
           // Let a 'tab' key to be triggered only by the GridWrapper onKeyDown event
           if (e.key === "Tab") e.preventDefault();
