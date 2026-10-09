@@ -2,7 +2,7 @@ import React, { FC, useCallback } from "react";
 import { useCellContext } from "./CellContext";
 import HiddenFocusTarget from "./HiddenFocusTarget";
 import { ColumnResizeBadge } from "./ColumnResizeBadge";
-import { useReactGridStore } from "../utils/reactGridStore";
+import { reactGridStores } from "../utils/reactGridStore";
 import { useReactGridId } from "./ReactGridIdProvider";
 
 type CellWrapperProps = React.HTMLAttributes<HTMLDivElement> & {
@@ -22,15 +22,15 @@ const CellWrapper: FC<CellWrapperProps> = ({
   const ctx = useCellContext();
   const id = useReactGridId();
 
-  const enableColumnSelectionOnFirstRow = useReactGridStore(id, (store) => store.enableColumnSelectionOnFirstRow);
-  const enableRowSelectionOnFirstColumn = useReactGridStore(id, (store) => store.enableRowSelectionOnFirstColumn);
+  // Read without subscribing: the flags are configuration and the two registries never change identity, so a store
+  // subscription per cell would only add a selector call per mounted cell to every store update.
+  const { enableColumnSelectionOnFirstRow, enableRowSelectionOnFirstColumn, cellsLookup, cellElements } =
+    reactGridStores()[id].getState();
 
   const disableTouchAction =
     ctx.isFocused ||
     (ctx.realRowIndex === 0 && enableColumnSelectionOnFirstRow) || // if column selection is enabled on first row
     (ctx.realColumnIndex === 0 && enableRowSelectionOnFirstColumn); // if row selection is enabled on first column
-
-  const cellsLookup = useReactGridStore(id, (store) => store.cellsLookup);
 
   if (onStringValueRequested && onStringValueReceived) {
     cellsLookup.set(`${ctx.realRowIndex} ${ctx.realColumnIndex}`, {
@@ -40,8 +40,6 @@ const CellWrapper: FC<CellWrapperProps> = ({
       onStringValueReceived,
     });
   }
-
-  const cellElements = useReactGridStore(id, (store) => store.cellElements);
 
   const registerContainer = useCallback(
     (element: HTMLDivElement | null) => cellElements.registerContainer(ctx.realRowIndex, ctx.realColumnIndex, element),

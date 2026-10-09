@@ -1,7 +1,7 @@
 import { Cell, Column, Range, RGThemeType, Row, StyledRange } from "./PublicModel.ts";
 import { RowMeasurement } from "./RowMeasurement.ts";
 import { ColumnMeasurement } from "./ColumnMeasurement.ts";
-import { CellMap, FocusedCell, IndexedLocation, PaneName, RowRange, SpanMember } from "./InternalModel.ts";
+import { CellMap, FocusedCell, IndexedLocation, PaneName, RowCells, RowRange, SpanMember } from "./InternalModel.ts";
 import { NumericalRange } from "./PublicModel.ts";
 import { Behavior, BehaviorId } from "./Behavior.ts";
 import { RGTheme } from "./RGTheme.ts";
@@ -14,6 +14,7 @@ export interface ReactGridStoreProps {
   columns: Column[];
 
   cells: CellMap;
+  cellsByRow: RowCells[];
   cellsLookup: CellsLookup;
   cellElements: CellElementsRegistry;
 

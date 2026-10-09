@@ -1,6 +1,6 @@
 import React, { CSSProperties, useCallback, useEffect, useRef } from "react";
 import { NumericalRange } from "../types/PublicModel";
-import { ALL_ROWS, EMPTY_AREA, GetCellOffsets, PaneName, StickyOffsets } from "../types/InternalModel";
+import { ALL_ROWS, EMPTY_AREA, GetCellOffsets, PaneName, RowCells, StickyOffsets } from "../types/InternalModel";
 import { isSpanMember } from "../utils/isSpanMember";
 import { getRowIndexesToRender } from "../utils/renderedRows";
 import { areAreasEqual } from "../utils/areAreasEqual";
@@ -53,26 +53,96 @@ const shouldMemoGridContent = (prevProps: PaneGridContentProps, nextProps: PaneG
   return true;
 };
 
+interface PaneRowProps {
+  rowIndex: number;
+  realRowIndex: number;
+  rowCells: RowCells | undefined;
+  startColIdx: number;
+  columnCount: number;
+  getCellOffset: NonNullable<PaneGridContentProps["getCellOffset"]>;
+  /** The selected area when it can contain cells of this row, otherwise the empty area. */
+  selection: NumericalRange;
+  /** The area whose cells must re-render after a reorder when it can contain cells of this row, otherwise the empty area. */
+  reorderedArea: NumericalRange;
+  focusedColIndex: number | undefined;
+}
+
+const areRowPropsEqual = (prev: PaneRowProps, next: PaneRowProps) =>
+  prev.rowCells === next.rowCells &&
+  prev.rowIndex === next.rowIndex &&
+  prev.realRowIndex === next.realRowIndex &&
+  prev.startColIdx === next.startColIdx &&
+  prev.columnCount === next.columnCount &&
+  prev.getCellOffset === next.getCellOffset &&
+  prev.focusedColIndex === next.focusedColIndex &&
+  areAreasEqual(prev.selection, next.selection) &&
+  areAreasEqual(prev.reorderedArea, next.reorderedArea);
+
+// One memoized unit per row, so a store update re-renders only the rows it touches rather than every mounted cell.
+const PaneRow: React.FC<PaneRowProps> = React.memo(
+  ({
+    rowIndex,
+    realRowIndex,
+    rowCells,
+    startColIdx,
+    columnCount,
+    getCellOffset,
+    selection,
+    reorderedArea,
+    focusedColIndex,
+  }) => {
+    const id = useReactGridId();
+    const store = reactGridStores()[id].getState();
+
+    return Array.from({ length: columnCount }, (_, colIndex) => {
+      const realColumnIndex = startColIdx + colIndex;
+      const cell = rowCells?.[realColumnIndex];
+
+      if (!cell || isSpanMember(cell)) return null;
+
+      return (
+        <CellContextProvider
+          key={realColumnIndex}
+          rowIndex={rowIndex}
+          colIndex={colIndex}
+          cell={cell}
+          rowSpan={cell.rowSpan}
+          colSpan={cell.colSpan}
+          realRowIndex={realRowIndex}
+          realColumnIndex={realColumnIndex}
+          getCellOffset={getCellOffset}
+          shouldRenderReorderedCells={isCellInRange(store, cell, reorderedArea)}
+          isSelected={isCellInRange(store, cell, selection)}
+          isFocused={focusedColIndex === realColumnIndex}
+        />
+      );
+    });
+  },
+  areRowPropsEqual
+);
+
+// A cell counts as inside an area only when its own row does, so rows outside it can skip the per-cell checks.
+const areaTouchingRow = (area: NumericalRange, realRowIndex: number) =>
+  area.startRowIdx <= realRowIndex && realRowIndex < area.endRowIdx ? area : EMPTY_AREA;
+
 export const PaneGridContent: React.FC<PaneGridContentProps> = React.memo(
   ({ paneName, range, getCellOffset = () => ({}), stickyOffsets }) => {
     const { startRowIdx, startColIdx, endColIdx } = range;
 
     const id = useReactGridId();
-    const store = reactGridStores()[id].getState();
 
     const columns = useReactGridStore(id, (store) => store.columns).slice(startColIdx, endColIdx);
-    const cells = useReactGridStore(id, (store) => store.cells);
+    const cellsByRow = useReactGridStore(id, (store) => store.cellsByRow);
     const focusedCell = useReactGridStore(id, (store) => store.focusedLocation);
     const selectedArea = useReactGridStore(id, (store) => store.selectedArea);
-    const renderedRowRange = useReactGridStore(id, (store) => store.renderedRowRange);
 
-    // Sticky row panes always mount in full; only the panes that scroll vertically are clipped to the rendered rows.
+    // Sticky row panes always mount in full; only the panes that scroll vertically are clipped to the rendered rows,
+    // and only they re-render when the rendered rows change.
     const isVerticallyScrollable = paneName === "Left" || paneName === "Center" || paneName === "Right";
-    const rowIndexes = getRowIndexesToRender(
-      range,
-      isVerticallyScrollable ? renderedRowRange : ALL_ROWS,
-      focusedCell.rowIndex
+    const renderedRowRange = useReactGridStore(id, (store) =>
+      isVerticallyScrollable ? store.renderedRowRange : ALL_ROWS
     );
+    const rowIndexes = getRowIndexesToRender(range, renderedRowRange, focusedCell.rowIndex);
 
     const currentBehavior = useReactGridStore(id, (store) => store.currentBehavior);
     const prevBehaviorId = useRef(currentBehavior.id);
@@ -88,55 +158,34 @@ export const PaneGridContent: React.FC<PaneGridContentProps> = React.memo(
 
     const memoizedGetCellOffset = useCallback(getCellOffset, [stickyOffsets]);
 
-    // A single keyed list, so cells keep their identity (and focus) when the rendered window shifts.
-    return rowIndexes.flatMap((realRowIndex) => {
-      const rowIndex = realRowIndex - startRowIdx;
-
-      return columns.map((_, colIndex) => {
-        const realColumnIndex = startColIdx + colIndex;
-        const cell = cells.get(`${realRowIndex} ${realColumnIndex}`);
-
-        if (!cell || isSpanMember(cell)) return null;
-
-        let shouldRenderReorderedCells = false;
-
-        if (
-          (prevBehaviorId.current === RowReorderBehavior.id || prevBehaviorId.current === ColumnReorderBehavior.id) &&
-          currentBehavior.id === DefaultBehavior().id
-        ) {
-          const prevSelection = prevSelectedArea.current;
-          const currentSelection = selectedArea;
-
-          shouldRenderReorderedCells = isCellInRange(store, cell, {
-            startRowIdx: Math.min(prevSelection.startRowIdx, currentSelection.startRowIdx),
-            endRowIdx: Math.max(prevSelection.endRowIdx, currentSelection.endRowIdx),
-            startColIdx: Math.min(prevSelection.startColIdx, currentSelection.startColIdx),
-            endColIdx: Math.max(prevSelection.endColIdx, currentSelection.endColIdx),
-          });
+    // Cells that took part in a reorder need one render after it ends, as their memoized positions are stale.
+    const hasReorderEnded =
+      (prevBehaviorId.current === RowReorderBehavior.id || prevBehaviorId.current === ColumnReorderBehavior.id) &&
+      currentBehavior.id === DefaultBehavior().id;
+    const reorderedArea: NumericalRange = hasReorderEnded
+      ? {
+          startRowIdx: Math.min(prevSelectedArea.current.startRowIdx, selectedArea.startRowIdx),
+          endRowIdx: Math.max(prevSelectedArea.current.endRowIdx, selectedArea.endRowIdx),
+          startColIdx: Math.min(prevSelectedArea.current.startColIdx, selectedArea.startColIdx),
+          endColIdx: Math.max(prevSelectedArea.current.endColIdx, selectedArea.endColIdx),
         }
+      : EMPTY_AREA;
 
-        const isCellSelected = isCellInRange(store, cell, selectedArea);
-
-        const isFocused = focusedCell.rowIndex === realRowIndex && focusedCell.colIndex === realColumnIndex;
-
-        return (
-          <CellContextProvider
-            key={`${realRowIndex}-${realColumnIndex}`}
-            rowIndex={rowIndex}
-            colIndex={colIndex}
-            cell={cell}
-            rowSpan={cell.rowSpan}
-            colSpan={cell.colSpan}
-            realRowIndex={realRowIndex}
-            realColumnIndex={realColumnIndex}
-            getCellOffset={memoizedGetCellOffset}
-            shouldRenderReorderedCells={shouldRenderReorderedCells}
-            isSelected={isCellSelected}
-            isFocused={isFocused}
-          />
-        );
-      });
-    });
+    // Rows are keyed by their real index, so cells keep their identity (and focus) when the rendered window shifts.
+    return rowIndexes.map((realRowIndex) => (
+      <PaneRow
+        key={realRowIndex}
+        rowIndex={realRowIndex - startRowIdx}
+        realRowIndex={realRowIndex}
+        rowCells={cellsByRow[realRowIndex]}
+        startColIdx={startColIdx}
+        columnCount={columns.length}
+        getCellOffset={memoizedGetCellOffset}
+        selection={areaTouchingRow(selectedArea, realRowIndex)}
+        reorderedArea={areaTouchingRow(reorderedArea, realRowIndex)}
+        focusedColIndex={focusedCell.rowIndex === realRowIndex ? focusedCell.colIndex : undefined}
+      />
+    ));
   },
   shouldMemoGridContent
 );

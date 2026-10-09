@@ -25,6 +25,7 @@ const DEFAULT_STORE_PROPS: Omit<ReactGridStoreProps, "cellElements"> = {
   rows: [],
   columns: [],
   cells: new Map(),
+  cellsByRow: [],
   cellsLookup: new Map(),
   paneRanges: {
     TopLeft: { startRowIdx: 0, endRowIdx: 0, startColIdx: 0, endColIdx: 0 },

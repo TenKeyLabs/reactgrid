@@ -1,6 +1,6 @@
 import { NonEditableCell } from "../cellTemplates/NonEditableCell";
 import { CellMatrix } from "../types/CellMatrix";
-import { SpanMember } from "../types/InternalModel";
+import { RowCells, SpanMember } from "../types/InternalModel";
 import { Cell, Column, Row } from "../types/PublicModel";
 
 // Type `any` is required to use React.ComponentType here
@@ -112,9 +112,14 @@ export const cellMatrixBuilder = (
     }
   }
 
+  const cellsByRow: RowCells[] = Array.from({ length: maxRowIndex + 1 }, (_, rowIndex) =>
+    Array.from({ length: maxColIndex + 1 }, (_, colIndex) => cells.get(`${rowIndex} ${colIndex}`)!)
+  );
+
   return {
     cellsLookup,
     cells,
+    cellsByRow,
     rows: initGridRows(maxRowIndex, rows),
     columns: initGridColumns(maxColIndex, columns),
   };
