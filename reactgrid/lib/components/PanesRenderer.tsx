@@ -17,6 +17,7 @@ import { getRowMeasurements } from "../utils/getRowMeasurements";
 import { useRenderedRowRange } from "../hooks/useRenderedRowRange";
 import { DEFAULT_ROW_OVERSCAN_RATIO } from "../utils/renderedRows";
 import isDevEnvironment from "../utils/isDevEnvironment";
+import { areAreasEqual } from "../utils/areAreasEqual";
 
 const devEnvironment = isDevEnvironment();
 
@@ -120,6 +121,16 @@ const PanesRenderer: FC<PanesRendererProps> = ({
   useEffect(() => {
     onCellFocused?.(focusedLocation);
   }, [focusedLocation]);
+
+  useEffect(
+    () =>
+      reactGridStores.getState()[id].subscribe((state, previousState) => {
+        if (!areAreasEqual(state.selectedArea, previousState.selectedArea)) {
+          state.onAreaSelected?.(state.selectedArea);
+        }
+      }),
+    [id]
+  );
 
   useEffect(() => {
     cells?.forEach((cell) => {

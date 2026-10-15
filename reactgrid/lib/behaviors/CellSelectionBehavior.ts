@@ -209,8 +209,6 @@ export const CellSelectionBehavior: Behavior = {
 
     const DefaultBehavior = store.getBehavior("Default");
 
-    store.onAreaSelected?.(store.selectedArea);
-
     return {
       ...store,
       currentBehavior: DefaultBehavior,
