@@ -18,7 +18,7 @@ import { getScrollableParent, getScrollViewport, isWindow } from "../utils/scrol
  * `rowsMountedPerFrame` that many per animation frame, the visible ones first.
  */
 export const useRenderedRowRange = (
-  gridContentRef: RefObject<HTMLDivElement>,
+  gridContentRef: RefObject<HTMLDivElement | null>,
   rowMeasurements: RowMeasurement[] | undefined,
   virtualizeRows: boolean,
   overscanRatio: number,

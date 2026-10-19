@@ -37,7 +37,6 @@ for (const artifact of ["main.js", "main.js.map", "main.d.ts"]) {
 }
 
 const sourcePackage = JSON.parse(readFileSync(resolve(libraryRoot, "package.json"), "utf8"));
-const peerDependencies = { react: sourcePackage.dependencies.react, "react-dom": sourcePackage.dependencies["react-dom"] };
 
 // Everything but React is bundled into dist, so the package needs no dependencies of its own.
 const packageJson = {
@@ -51,7 +50,7 @@ const packageJson = {
   license: "MIT",
   repository: { type: "git", url: sourceUrl },
   gitHead: commit,
-  peerDependencies,
+  peerDependencies: sourcePackage.peerDependencies,
 };
 
 writeFileSync(resolve(targetDir, "package.json"), `${JSON.stringify(packageJson, null, 2)}\n`);
