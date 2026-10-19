@@ -9,8 +9,8 @@ import { useRef } from "react";
  * @returns  Memoized value
  */
 export function useDeepCompareMemo<T>(factory: () => T, dependencies: any[]): T {
-  const currentDependenciesRef = useRef<any[]>();
-  const memoizedValueRef = useRef<T>();
+  const currentDependenciesRef = useRef<any[]>(undefined);
+  const memoizedValueRef = useRef<T>(undefined);
 
   if (!isEqual(currentDependenciesRef.current, dependencies)) {
     currentDependenciesRef.current = cloneDeep(dependencies);
